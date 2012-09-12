@@ -1,0 +1,28 @@
+1) run lmbench on target:
+lmbench-run
+ => results are in /var/lib/lmbench/results
+
+2) process these results to extract the data arrays, using a custom python tool: parse.py
+ => generates n data files and a gnuplot file
+
+3) do the same for n configurations to compare
+
+4) merge the generated gnuplot files into a single one to plot same kind of data in the same graph
+
+5) customize the gnuplot file, to allow multiple graphs per window:
+ can use unix default terminal wxt, or generate png
+
+For png:
+set output 'plot1.png' 
+set multiplot layout 3, 3
+
+# plot n graphs
+...
+unset multiplot
+
+then can re-do the same with another output file
+
+sample gnuplot file are provided:
+ plot: basic gnuplot setup
+ example: generate 2 png files with 9 plots each
+
