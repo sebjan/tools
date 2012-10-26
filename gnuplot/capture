@@ -1,0 +1,57 @@
+#!/bin/bash
+# make a 5s capture and format results for graph displays
+
+if [ "$1" == "" ]; then
+	echo "Please provide a title in parameter: $0 \"title to use\" [length(ms) [averaging(samples)]]"
+	exit
+else
+	title=$1
+fi;
+
+if [ "$2" == "" ]; then
+	len=5000
+else
+	len=$2
+fi;
+
+if [ "$2" == "-r" ]; then	# just re-draw the graphs
+	echo "Replaying last capture..."
+	len=5000
+else
+	if [ "$3" != "" ]; then	# use passed 3rd argument as averaging value
+		am=$3
+	elif [ $len -ge 110 ]; then
+		am=10		# default averaging to 10 samples
+	else
+		am=1
+		echo " Short capture period => not applying any meaning algo"
+	fi;
+	echo "Running a ${len}ms capture (averaging on $am samples)"
+	arm-probe -x -j -m $am -l $len > log 2>errlog
+fi;
+
+# process data
+cat config | grep "^\\ " | tr -s ' ' | tr -s '\t' | tr '\t' ' ' | cut -d ' ' -f2 > .chans
+tr=""
+for name in `cat .chans`
+do
+	str="/$name:.*Wavg/ {print \$14;}"
+	value=`awk "$str" errlog | sed 's/Wavg//'`
+	tr="$tr $value"
+done
+
+data1=`echo $tr | awk '{print $1," ",$2," ",$3," ",$4," ",$5," ",$6," ",$7," ",$8-($1+$2+$3+$4+$5+$6+$7)}'`
+
+# generate local mean for testing results
+awk /^time/ log > mean
+echo \"$title\" $data1 >> mean
+GP_DATA_FILE="mean" gnuplot -p means.gnuplot
+
+# happen also to global mean file
+echo \"$title\" $data1 >> means
+echo " => happended one set of measures to 'means'"
+
+head -n -2 log > time-data
+GP_DATA_FILE="time-data" GP_TITLE="$title (avg=${am}samples)" gnuplot -p timeline.gnuplot
+echo " => Generated time-data"
+
